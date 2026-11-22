@@ -432,3 +432,10 @@ Enemy-village scouting, close/big target ranking and 2× battle simulation remai
 not implemented in this phase.
 
 Recurring conquests start only when estimated Envoy funding, training and capture plus 60 ticks fit before round end. Funding includes capital production and incoming trades. The nearest unowned map target is used; without a map, the estimate assumes 600 ticks of one-way travel.
+
+While the active mission prepares and lacks its Envoy funds, economic cities send
+only the remaining deficit to the capital. Keep 1000 per resource instead of the
+ordinary 4000/next-build reserve; allocate the richest surplus first. Build Market
+capacity toward at most 13 merchants (96), then ship with available merchants (95).
+Deduct in-flight and journalled shipments and respect storage, standing orders and
+round-end delivery. This does not add hypothetical future shipments to admission.

@@ -22,6 +22,14 @@ capacity is complete. The fresh-target round-end guard remains in force. Per-wav
 deadlines use current target loyalty from reports or assessments, otherwise landed hits and
 regeneration; they do not restart at 100 after each wave.
 
+During conquest preparation, economic cities fund the capital's missing Envoy bill.
+Keep 1000 of each resource rather than the ordinary 4000/next-build reserve, and
+allocate the deficit richest available surplus first. Ship with ordinary Markets and
+available merchants; grow Markets toward at most 13 merchants at priority 96 and
+ship at 95. Subtract already in-flight and journalled shipments, respect capital
+storage, standing orders and council timing, and stop when funded or an Envoy is
+owned/queued. Admission remains unchanged and counts only already in-flight trades.
+
 The capital grows producers to 5, then toward 8; after producers 8 it raises Great Hall toward 5
 and continues production growth. Its fixed early military order is Lumberyard 14, Quarry 14, Mine
 12 → Barracks 1 → Wall 5 → Hall 10 → Barracks 5 → producers 15. Pikemen training starts at

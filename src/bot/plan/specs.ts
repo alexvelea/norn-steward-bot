@@ -85,7 +85,7 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     eligible: ["Capital has Market 5 (13 merchants of 1,000 each)."],
   },
   "logistics.fulfil": {
-    intent: "Turn open requests into trades, one resource per trade, so a shortage of one resource never blocks the others.",
+    intent: "Turn open requests into trades. During conquest preparation, fund the capital’s Envoy deficit from economic cities, richest surplus first, lowering their reserve to 1000 per resource; use normal Markets and available merchants. Only already in-flight trades count toward admission.",
     eligible: ["An open request for that resource.", "No trade from the capital to that city already carrying that resource."],
     priority: [
       "Uses the request's own score.",
@@ -163,7 +163,7 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     intent: "A developed city funds the capital instead of piling up stock.",
     eligible: ["All three producers at level 15 or higher and a Market.", "Per resource, surplus = stock − max(4,000, cost of the city's highest-scored next build), capped by the capital's free storage after shipments in flight.", "Ship when the surplus fills min(5, all) merchants; one trade carries all three resources, largest surplus first."],
     priority: ["Score 50: below the city's own builds, so it never spends what the next build needs."],
-    never: ["Never ship below the 4,000 reserve, so the city does not start requesting resources back."],
+    never: ["Normally retain 4000 and the next build's bill. During conquest preparation only, lower the reserve to 1000 to fund the Envoy deficit, richest surplus first at priority 95. Available merchants and capital storage still bound every shipment."],
   },
   "econ.requests": {
     intent: "The economic city publishes what it needs; the capital fulfils it. The game only allows pushing, so requests live only inside the bot.",

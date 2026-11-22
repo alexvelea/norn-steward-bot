@@ -7,6 +7,7 @@ import { proposalTask } from '../bot/plan/graph.js';
 import { cityRoles } from "../bot/strategy/roles.js";
 import { stockMinutes } from "./balance.js";
 import { expansionReadiness } from "./sustained-defense.js";
+import { envoyFunding } from './conquest-funding.js';
 import {nextConquestBuilding, fundingUpgrade, conquestLoyalty} from '../review/conquest-plan.js';
 import { BARRACKS_CAP, CONQUEST_PRODUCER_FLOOR, EARLY_HALL, RAIDER_MIN_BARRACKS, RAIDER_SEND_MIN, RAIDER_TARGET, hallRushActive } from "./defense-budget.js";
 
@@ -86,6 +87,7 @@ export function applyConquest(context: AdvisorContext,proposals: Proposal[],c?: 
  }
  if(state.world.status!=='running'||rules.version!==state.world.rulesVersion||
    Object.values(v.orders).some(o=>o.length)||state.scheduled.length)return proposals;
+ retained.push(...envoyFunding(context,v));
  const metadata=rules.rules.BUILDINGS as Record<BuildingId,{name:string}>;
  const blockers=()=> (state.player.nextActTick??0)>state.world.tick?['COUNCIL_COOLDOWN']:[];
  const buffer=Math.max(50,Math.ceil(v.population.max*.2));

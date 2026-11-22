@@ -554,7 +554,7 @@ Contains edges are solid blue, requires edges are dashed red, and contributesTo 
 | capability.multi-submit | capability | Multiple submissions per cycle | Unavailable: one authorized submission per cycle remains. | — | — | — |
 | roles | policy | City roles | Tag every city automatically: the conquest origin is the capital, every other city is economic. | — | — | — |
 | logistics | mission | Supply economic cities | The capital fulfils requests published by economic cities: resources by trade, later defenders. | — | conquest.market5 | — |
-| logistics.fulfil | task | Fulfil requests | Send each requested resource as its own trade, weighed against the capital's own builds; one shipment per resource in flight per city. | — | — | — |
+| logistics.fulfil | task | Fulfil requests | Send requested resources to cities. During conquest preparation, cities also fund the capital’s Envoy deficit, richest surplus first, retaining only 1000 per resource; admission counts only in-flight trades. | — | — | — |
 | economic-city | mission | Economic city | Grow a captured city into an economy fed by capital shipments; no military. | — | — | — |
 | econ.build-order | group | Build order | Fixed steps in order; each step starts only after the previous one is done. | — | — | — |
 | econ.cellar3 | task | 1. Cellar 3 | Cheap first protection: hides 796 of each resource. | level=3 | — | — |
@@ -589,7 +589,7 @@ Contains edges are solid blue, requires edges are dashed red, and contributesTo 
 | econ.request-defenders | task | Request defenders | Unlocked by Wall 10. Target stationed Pikemen = max(250, floor(capital home Pikemen ÷ 3)); request a top-up only below 80% (capital 600 → target 250, top-up below 200). The capital trains for 250 retained + all active city requests, or its higher own target plus requests, and sends only when 250 remain at home. | baseline=250, capitalShare=3, triggerShare=0.8 | econ.wall10 | — |
 | econ.request-scouts | task | Request scouts | Keep 20 Scouts stationed; support Scouts defend against enemy scouting. | — | — | — |
 | econ.producers.15 | milestone | Producers at level 15 | All three producers reach level 15. | minimum=15 | — | — |
-| econ.surplus | task | Send surplus to the capital | Once all producers are 15+, ship stock above the next build's cost (at least 4,000 of each kept) to the capital, bounded by merchants and the capital's free storage. | producers=15, reserve=4000, minimumMerchants=5 | econ.market, econ.producers.15 | — |
+| econ.surplus | task | Send surplus to the capital | Normally ship surplus after producers 15 with a 4000/next-build reserve. While conquest prepares, ship its Envoy deficit with a 1000 reserve at priority 95, richest surplus first, bounded by available merchants and capital storage. | producers=15, reserve=4000, minimumMerchants=5 | econ.market, econ.producers.15 | — |
 | econ.wall10 | task | Wall 10 | Built after producers reach 10; the only military building an economic city builds. | level=10 | econ.producers.10 | — |
 | expansion.next | group | Next conquest | After the first capture, keep taking one new city at a time when existing cities are developed enough. | — | conquest.first-achieved | — |
 | expansion.readiness | policy | Expansion readiness | Start the next mission after capital readiness and Great Hall 10 in every economic city, only if estimated Envoy funding, training and capture fit before round end with a 60-tick margin; train its Envoy only after Every city defended. | economicHall=10, homePikemen=150, endMargin=60 | — | — |
