@@ -13,17 +13,32 @@ below record historical rules and must not be reinterpreted as measurements unde
 
 ## Current policy: hardcoded early game and sustainable military budget
 
+Capital producers can grow to 25, including conquest funding fallback and Hall projections.
+The shared producer-20 attack, defender-target and growth transitions remain unchanged.
+
+After a capture, proactively expand capital storage to fit the next live Envoy cost (priority 96),
+unless an Envoy is already owned or queued. Do not wait for overflow or admit a mission before
+capacity is complete. The fresh-target round-end guard remains in force. Per-wave dispatch
+deadlines use current target loyalty from reports or assessments, otherwise landed hits and
+regeneration; they do not restart at 100 after each wave.
+
 The capital grows producers to 5, then toward 8; after producers 8 it raises Great Hall toward 5
 and continues production growth. Its fixed early military order is Lumberyard 14, Quarry 14, Mine
 12 → Barracks 1 → Wall 5 → Hall 10 → Barracks 5 → producers 15. Pikemen training starts at
-Barracks 1 and runs in parallel until 250 are home. The capital never proposes a Cellar; economic
-cities keep their existing Cellar behavior.
+Barracks 1 and runs in parallel until the early goal of 200 home Pikemen. The capital never
+proposes a Cellar; economic cities keep their existing Cellar behavior.
 
-After producers 15 and 250 home Pikemen (`earlyGoalMet`), the capital starts the Scout path
+After producers 15 and 200 home Pikemen (`earlyGoalMet`), the capital starts the Scout path
 (Smithy 1, Stable 1). Barracks is capped at 5, and Raiders train from Barracks 5. Conquest then
 needs Smithy 10 → Market 5 → Court; Hall 10 and Barracks 5 are already complete. Economic-city
 military and producer behavior remains unchanged. Historical scripts import archived baselines
 explicitly.
+
+The capital's own Pikemen target is 200 before producer 20, then
+`max(200, 3 × strongest economic-city stationed Pikemen)`. With active defender requests,
+train toward `max(own target, 250) + sum(all active city requests)`: at least 250 retained
+plus every request. With no requests, keep the own target. Sending each request requires
+250 Pikemen left at home; a request for 250 therefore needs at least 500 before sending.
 
 Recruit only when each resource's full-time troop demand consumes at most 80% of its gross
 production, and the full cohort is currently funded. Reserve at least 20% income for construction.

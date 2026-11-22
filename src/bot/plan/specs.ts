@@ -36,9 +36,9 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     priority: ["100 when no population is free.", "95 when below the buffer.", "95 when the runway rule applies (the Farm goes before the long build).", "20 otherwise (not executed)."],
   },
   "economy.storehouse": {
-    intent: "Avoid wasting income on full storage.",
-    eligible: ["Stock plus up to 300 ticks of income (after troop burn) exceeds storage for any resource."],
-    priority: ["90 plus up to 9 by how far the forecast exceeds storage.", "25 otherwise (not executed)."],
+    intent: "Avoid overflow and proactively fit the capital's next Envoy before recurring admission.",
+    eligible: ["Projected stock exceeds storage, or the capital owns captured cities, has no owned/queued Envoy and the live next Envoy cost exceeds capacity.", "Admission still waits for completed storage and applies the fresh-target round-end guard."],
+    priority: ["96 for capital Envoy capacity; otherwise 90 plus up to 9 for forecast overflow.", "25 otherwise (not executed)."],
   },
   "economy.hall": {
     intent: "Buy construction speed only when it pays back.",
@@ -212,8 +212,8 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     never: ["Never send Pikemen that are part of the home-defence target.", "Never dispatch with fewer than 100 home Raiders."],
   },
   "expansion.dispatch": {
-    intent: "Same dispatch rules as the first conquest, with at least 100 Raiders at home.",
-    eligible: ["At least 100 Raiders and one Envoy at home; every home Raider is sent."],
+    intent: "Dispatch with at least 100 Raiders; estimate remaining capture time from current target loyalty, not a reset to 100 after each hit.",
+    eligible: ["At least 100 Raiders and one Envoy at home; every home Raider is sent.", "Use the latest target battle report or target assessment; otherwise count landed waves and conservatively regenerate since mission start. Fresh admission remains at 100 loyalty."],
     priority: ["94."],
     never: ["Never more than six waves per target.", "Never target an owned village."],
   },
@@ -231,8 +231,8 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     priority: ["Great Hall 15 comes first after producers 20.", "Score: to be decided when codified."],
   },
   "economy.producer-cap": {
-    intent: "Capital producers stop at level 20.",
-    never: ["Never raise a capital producer above level 20."],
+    intent: "Capital producers stop at level 25; attack and defence transitions remain at level 20.",
+    never: ["Never raise a capital producer above level 25."],
   },
   "early.economy": {
     intent: "Reach the capital's early military producer gate: Lumberyard 14, Quarry 14, Mine 14.",
@@ -268,15 +268,15 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     priority: ["Score: to be decided when codified."],
   },
   "military.pikemen-baseline": {
-    intent: "After the early goal, maintain 200 home Pikemen; economic-city defender requests remain additive.",
-    eligible: ["Train from Barracks 1 toward 200 home Pikemen during the early game.", "At producer level 20, target at least 200 or three times the strongest economic city's Pikemen.", "Economic-city defender requests remain additive."],
+    intent: "Train for 250 retained + all active city requests, or the higher own target plus requests. With no requests, retain the unchanged own target.",
+    eligible: ["Recruit from Barracks 1; the early goal remains 200 home Pikemen.", "The own target is 200 before producer 20, then max(200, 3 × strongest economic-city stationed Pikemen).", "With active requests, train toward max(own target, 250) + the sum of all requests. One request for 250 requires at least 500 home Pikemen before sending.", "Send support only when at least 250 Pikemen will remain at home."],
     priority: ["Score: to be decided when codified."],
     never: ["Never use Shieldmen for this baseline."],
   },
   "military.defence-scale": {
-    intent: "Once the capital's producers reach 20, the capital's home Pikemen grow to 3× the strongest other city's; economic cities follow via their ÷3 defender target.",
+    intent: "At producer 20, use own target max(200, 3 × strongest economic-city stationed Pikemen); active requests require max(own target, 250) + all requests. Without requests, keep the own target.",
     eligible: ["The capital's producers reach level 20.", "Compare home Pikemen with the strongest other city's defence."],
-    priority: ["Set the home Pikemen target to 3× the strongest other city's defence; economic-city targets use one third of the capital target.", "Score: to be decided when codified."],
+    priority: ["Retain at least 250 plus all active requests in the training target, even when the own target is lower; preserve a higher own target. Economic-city targets use max(250, floor(capital home Pikemen ÷ 3)).", "Score: to be decided when codified."],
   },
   "military.barracks-growth": {
     intent: "Raise Barracks when it cannot train enough Pikemen or conquest Raiders in time, up to level 5.",
@@ -407,8 +407,8 @@ export const SPECS: Readonly<Record<string, NodeSpec>> = {
     priority: ["Score: to be decided when codified."],
   },
   "econ.request-defenders": {
-    intent: "Unlocked by Wall 10. Target Pikemen stationed = max(250, capital home Pikemen ÷ 3). Request a top-up to the target only when stationed Pikemen fall below 80% of it (for example, capital 600 → target 200, top-up when ≤160 (below 200×0.8)). Fulfilled by the capital.",
-    eligible: ["Wall 10 is complete.", "Target stationed Pikemen = max(250, capital home Pikemen ÷ 3).", "Request a top-up only below 80% of target; for a target of 200, the threshold is 160."],
+    intent: "Request a top-up below 80% of max(250, floor(capital home Pikemen ÷ 3)). The capital trains for 250 retained + all active city requests, or its higher own target plus requests.",
+    eligible: ["Wall 10 is complete.", "Target stationed Pikemen = max(250, floor(capital home Pikemen ÷ 3)).", "For capital 600, target 250 and request a top-up only below 200 stationed Pikemen.", "The capital sends only when home Pikemen cover 250 retained plus this request."],
     priority: ["Score: to be decided when codified."],
     never: ["Never train defenders in the economic city; the capital fulfils the request."],
   },

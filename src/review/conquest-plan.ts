@@ -15,8 +15,8 @@ export function safeEnvoyAttack(battle:SimulateBattleResponse,maxEscortLoss=.2):
  return battle.winner==='attacker'&&(battle.attackerSurvivors.envoy??0)>=1&&sent>0&&(battle.attackerLost.raider??0)/sent<=maxEscortLoss;
 }
 /** Exact global regen boundaries between successive successful hits by one surviving Envoy. */
-export function conquestLoyalty(arrivals:number[],hit:number,regenTicks:number,max=100):number[]{
- if(hit<=0||regenTicks<=0)throw new Error('Invalid live loyalty rules');let loyalty=max,previous=0;
+export function conquestLoyalty(arrivals:number[],hit:number,regenTicks:number,max=100,loyalty=max,previous=0):number[]{
+ if(hit<=0||regenTicks<=0)throw new Error('Invalid live loyalty rules');
  return arrivals.map(t=>{if(!Number.isInteger(t)||t<previous)throw new Error('Arrival ticks must increase');loyalty=Math.min(max,loyalty+Math.floor(t/regenTicks)-Math.floor(previous/regenTicks));loyalty-=hit;previous=t;return loyalty;});
 }
 

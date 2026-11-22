@@ -57,6 +57,15 @@ test('conquest waits for the integer processing tick after fractional recruitmen
  assert.equal(conquestCaptureTick(context,c,100.906),conquestCaptureTick(context,c,101));
  assert.equal(conquestCaptureTick(context,c,100),250);
 });
+
+test('dispatch can finish a damaged target late while fresh-target admission remains blocked',()=>{
+ const {context,v,c}=fixture();context.state.world.endsAtTick=230;c.plan.waves=2;
+ c.plan.lastBattle={tick:100,attacker:{id:v.id},defender:{id:'t'},loyalty:{before:39,after:5}} as Report;
+ c.assessment!.targetId='t';c.assessment!.targetLoyalty=5;
+ c.assessment!.battle.loyalty={before:100,after:66,conquered:false};
+ assert.equal(recurringConquestFits(context,v,c.map),false);
+ assert.equal(selectProposal(applyConquest(context,[],c)).selected?.action.type,'send');
+});
 test('standing orders, scheduled actions and a non-running world preserve proposals unchanged',()=>{
  for(const block of [
   (x:ReturnType<typeof fixture>)=>{x.v.orders.build=[{building:'wall',toLevel:2}];},
@@ -123,6 +132,26 @@ test('conquest develops the producer with the least stock first',()=>{
  assert.equal(proposal?.action.type,'build');
  if(proposal?.action.type==='build')assert.equal(proposal.action.building,'quarry');
 });
+
+test('capital conquest funding fallback permits producer 21 through 25 but not 26',()=>{
+ for(const level of [21,25,26]){
+  const {context,v,c}=fixture();
+  Object.assign(v.buildings,{lumberyard:20,quarry:20,mine:level-1,smithy:9});
+  v.resourcesMilli={timber:1000000,stone:1000000,iron:1000000};
+  v.productionPerTickMilli={timber:1000,stone:1000,iron:1000};
+  v.units.home.envoy=0;
+  for(const o of v.options.build)o.ok=false;
+  Object.assign(v.options.build.find(o=>o.building==='smithy')!,{
+   level:10,cost:{timber:1000,stone:1000,iron:10000},ticks:10,blockers:['INSUFFICIENT_RESOURCES'],
+  });
+  Object.assign(v.options.build.find(o=>o.building==='mine')!,{
+   level,cost:{timber:1,stone:1,iron:1},ticks:1,pop:0,ok:true,blockers:[],
+  });
+  const proposal=applyConquest(context,[],c).find(p=>p.action.type==='build');
+  assert.equal(proposal?.action.type,'build');
+  if(proposal?.action.type==='build')assert.equal(proposal.action.building,level<=25?'mine':'smithy');
+ }
+});
 test('transition keeps normal proposals while conquest is preparing',()=>{
  const {context,c}=fixture();
  const routine={id:'new',task:'military.pikemen-baseline',villageId:'v1',action:{type:'train',village:'v1',unit:'pikeman',count:9}} as Proposal;
@@ -181,7 +210,10 @@ async function executor(mode: 'ok'|'lost'|'unapplied'|'reject' = 'ok') {
   if(path.endsWith('/map'))return {...x.c.map,tick:x.context.state.world.tick,snapshotTick:x.context.state.world.tick} as T;
   if(path.endsWith('/reports'))return {reports,next:null} as T;
   if(path.includes('/reports/'))return structuredClone(reports.find(r=>path.endsWith('/'+r.id))) as T;
-  if(path.endsWith('/simulate/battle'))return x.c.assessment!.battle as T;
+  if(path.endsWith('/simulate/battle')){
+   assert.equal((body as {loyalty:number}).loyalty,100);
+   return x.c.assessment!.battle as T;
+  }
   assert.ok(path.endsWith('/actions'),path);
   const action=(body as {actions:Action[]}).actions[0];
   assert.deepEqual(saved.pending?.action,action,'exact request is persisted before POST');

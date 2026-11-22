@@ -134,6 +134,33 @@ test("capital sends a defender request only when home Pikemen cover its target p
   if (proposal?.action.type === "send") assert.deepEqual(proposal.action.units, {pikeman: 51});
 });
 
+test("capital trains enough below producer 20 to retain 250 and fund every city request", () => {
+  const context = ready();
+  const {capital, city} = addEconomicCity(context);
+  Object.assign(capital.buildings, {lumberyard: 19, quarry: 19, mine: 19});
+  capital.units.home.pikeman = 450;
+  let proposals = evaluateSustainedDefense(context);
+  assert.equal(proposals.find(value => value.action.type === "train" && value.action.unit === "pikeman")?.targetLevel, 500);
+  assert.ok(!proposals.some(value => value.task === "econ.request-defenders"));
+
+  const second = structuredClone(city);
+  second.id = "eco2";
+  second.units.home.pikeman = 100;
+  context.state.villages.push(second);
+  context.cityRoles = new Map([...context.cityRoles!, [second.id, {role: "economic", reason: "fixture"}]]);
+  proposals = evaluateSustainedDefense(context);
+  assert.equal(proposals.find(value => value.action.type === "train" && value.action.unit === "pikeman")?.targetLevel, 650);
+
+  capital.units.home.pikeman = 650;
+  proposals = evaluateSustainedDefense(context);
+  assert.equal(proposals.filter(value => value.task === "econ.request-defenders").length, 2);
+  assert.ok(!proposals.some(value => value.action.type === "train" && value.action.unit === "pikeman"));
+
+  city.units.home.pikeman = second.units.home.pikeman = 200;
+  capital.units.home.pikeman = 200;
+  assert.ok(!evaluateSustainedDefense(context).some(value => value.action.type === "train" && value.action.unit === "pikeman"));
+});
+
 test("capital trains Scouts at 20 per owned city and economic cities never train troops", () => {
   const context = ready();
   const {capital, city} = addEconomicCity(context);

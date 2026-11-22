@@ -1,7 +1,7 @@
-import { defenseBudget, PRODUCER_CEILING, producerLevel, militaryEconomy, defenseReady } from "./defense-budget.js";
+import { defenseBudget, producerLevel, militaryEconomy, defenseReady } from "./defense-budget.js";
 import { productionPayback } from "./payback.js";
 import { completionWindow } from "./completion.js";
-import { estimateHall } from "./hall.js";
+import { estimateHall, HALL_LOOKAHEAD } from "./hall.js";
 import type { Action, BuildingId, Resources, VillageState } from "../shared/api.js";
 import { balanceLags, balanceScore, type ResourceId } from "./balance.js";
 import {
@@ -11,6 +11,7 @@ import {
   type Proposal,
 } from "./types.js";
 import { proposalTask } from "../bot/plan/graph.js";
+import { cityRoles } from "../bot/strategy/roles.js";
 
 export const ECONOMIC_BUILDINGS = [
   "hall",
@@ -97,10 +98,11 @@ export function evaluateEconomy(context: AdvisorContext): Proposal<Extract<Actio
   if (!metadata || rules.version !== state.world.rulesVersion)
     throw new Error("Live rules do not match this world's rules version.");
   const proposals: Proposal<Extract<Action, {type: "build"}>>[] = [];
+  const roles = context.cityRoles ?? cityRoles(context, []);
   for (const v of state.villages) {
     const producerCeiling = context.cityRoles?.get(v.id)?.role === "economic"
       ? v.buildings.wall >= 10 ? 25 : 10
-      : PRODUCER_CEILING;
+      : 25;
     const f = forecastEconomy(v);
     const flow = militaryEconomy(v), phaseLevel = producerLevel(v);
     const defense = defenseReady(v) ? defenseBudget(v) : null;
@@ -118,10 +120,15 @@ export function evaluateEconomy(context: AdvisorContext): Proposal<Extract<Actio
     const storageTicks = Math.max(0, Math.min(300, state.world.endsAtTick - state.world.tick));
     const storageForecast = (r: keyof Resources) => v.resourcesMilli[r] + flow.availableMilli[r] * storageTicks;
     const needsStorage = resources.some((r) => storageForecast(r) > v.storage * 1000);
+    const envoyOption = v.options.train.find(option => option.unit === "envoy");
+    const envoyStorage = roles.get(v.id)?.role === "capital" && state.villages.length >= 2 &&
+      !v.units.home.envoy && !v.units.away.envoy && !v.training.court.some(batch => batch.unit === "envoy") &&
+      !!envoyOption && resources.some(resource => envoyOption.cost[resource] > v.storage);
     const producerCoverages = Object.values(producers).map(
       (r) => f.coverage[r],
     );
-    const hall = estimateHall(v, rules, state.world);
+    const hall = estimateHall(v, rules, state.world, context.cityRoles?.get(v.id)?.role === "economic"
+      ? undefined : {...HALL_LOOKAHEAD, producerCeiling});
     for (const building of ECONOMIC_BUILDINGS) {
       const option = v.options.build.find((o) => o.building === building),
         queued = v.buildQueue.find((q) => q.building === building);
@@ -154,13 +161,15 @@ export function evaluateEconomy(context: AdvisorContext): Proposal<Extract<Actio
         importance = needed ? (f.freePopulation <= 0 ? 100 : 95) : 20;
         reason = `${f.freePopulation} population slots free; target max(50, 20% of ${v.population.max}) = ${round(f.requiredFreePopulation)}. ${needed ? "Below the required buffer; expand capacity." : "Buffer is sufficient; do not upgrade."} Queued buildings and recruitment are already included in population used.${farmForRecruitment ? " Also leave room for the next minute-long Pikeman batch so recruitment cannot stall exactly at the buffer." : ""}`;
       } else if (building === "storehouse") {
-        needed = needsStorage;
+        needed = needsStorage || envoyStorage;
         const peak = Math.max(...resources.map((r) => storageForecast(r) / 1000));
         importance = needed
           ? 90 +
             Math.min(9, Math.ceil((peak / Math.max(1, v.storage) - 1) * 10))
           : 25;
-        reason = `Stock + ${storageTicks} ticks of income after reserved troop burn (at most 300, bounded by round end): timber ${round(storageForecast("timber") / 1000)}, stone ${round(storageForecast("stone") / 1000)}, iron ${round(storageForecast("iron") / 1000)}. Storage holds ${v.storage} of each. ${needed ? "At least one resource would overflow; upgrade storage." : "All resources fit; do not upgrade."}`;
+        if (envoyStorage) importance = 96;
+        reason = `Stock + ${storageTicks} ticks of income after reserved troop burn (at most 300, bounded by round end): timber ${round(storageForecast("timber") / 1000)}, stone ${round(storageForecast("stone") / 1000)}, iron ${round(storageForecast("iron") / 1000)}. Storage holds ${v.storage} of each. ${needsStorage ? "At least one resource would overflow; upgrade storage." : envoyStorage ? "No overflow is required for Envoy capacity." : "All resources fit; do not upgrade."}`;
+        if (envoyStorage) reason = `The capital's next Envoy costs ${envoyOption!.cost.timber}/${envoyOption!.cost.stone}/${envoyOption!.cost.iron}; upgrade Storehouse beyond ${v.storage} per resource before recurring admission. ` + reason;
       } else {
         needed = hall.needed;
         importance = defense ? Math.min(69, hall.importance) : hall.importance;

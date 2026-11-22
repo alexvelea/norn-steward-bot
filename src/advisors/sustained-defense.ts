@@ -93,7 +93,7 @@ export function evaluateSustainedDefense(context: AdvisorContext): Proposal[] {
   const producers = Math.min(capital.buildings.mine, capital.buildings.quarry, capital.buildings.lumberyard);
   const ownTarget = !militaryUnlocked(capital) ? 0 : producers < PRODUCER_CEILING ? EARLY_PIKEMEN_TARGET : Math.max(EARLY_PIKEMEN_TARGET, 3 * strongestCity);
   const requestTotal = defenderRequests.reduce((sum, request) => sum + request.amount, 0);
-  const pikeTarget = ownTarget + requestTotal;
+  const pikeTarget = Math.max(ownTarget, requestTotal > 0 ? 250 : 0) + requestTotal;
   const proposals: Proposal[] = [];
 
   const pikeOption = capital.options.train.find(option => option.unit === "pikeman");
@@ -109,7 +109,7 @@ export function evaluateSustainedDefense(context: AdvisorContext): Proposal[] {
       const proposal = minuteTrainingProposal(context, capital, "pikeman", batch, pikeTask,
         growth ? 50 : 75,
         growth ? "Grow the Pikemen garrison after its current target is met." :
-          `Train toward ${pikeTarget} home Pikemen: own target ${ownTarget} plus ${requestTotal} active city requests.`,
+          `Train toward ${pikeTarget} home Pikemen: own target ${pikeTarget - requestTotal} plus ${requestTotal} active city requests.`,
         `${state.world.epoch}:${capital.id}:pikemen:${pikeTarget}:${growth ? "growth" : "target"}`,
         (capital.units.home.pikeman ?? 0) + queued,
         growth ? (capital.units.home.pikeman ?? 0) + queued + batch : pikeTarget);

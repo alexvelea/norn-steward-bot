@@ -118,6 +118,18 @@ test("existing queues and standing orders defer Hall planning", () => {
   ];
   assert.equal(estimate().sequence.length, 0);
 });
+
+test("capital Hall projections can use producer 21 through 25 without changing the default ceiling", () => {
+  const {c, v} = scenario();
+  for (const id of ["lumberyard", "quarry", "mine"] as const) v.buildings[id] = 20;
+  assert.equal(estimateHall(v, c.rules, c.state.world, LEGACY_HALL_LOOKAHEAD).sequence.length, 0);
+  const policy = {...LEGACY_HALL_LOOKAHEAD, producerCeiling: 25};
+  const projection = estimateHall(v, c.rules, c.state.world, policy);
+  assert.ok(projection.sequence.length > 0);
+  assert.ok(projection.sequence.every(step => step.level > 20 && step.level <= 25));
+  for (const id of ["lumberyard", "quarry", "mine"] as const) v.buildings[id] = 25;
+  assert.equal(estimateHall(v, c.rules, c.state.world, policy).sequence.length, 0);
+});
 test("planned sequence includes needed capacity and does not presume fixed producer counts", () => {
   const { v, estimate } = scenario();
   v.population = { used: 151, max: 200 };

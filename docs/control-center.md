@@ -8,6 +8,13 @@ No LLM, model key, prompt or inference service participates in economic decision
 
 ## Current phased economy and recruitment policy
 
+Recurring conquest capacity is proactive: once captured cities exist, the capital expands its
+Storehouse at priority 96 if the next live Envoy cost would not fit and no Envoy is owned or queued.
+It does not wait for overflow. Admission still waits for completed capacity and checks fresh-target
+funding, training, travel and a 60-tick end margin. Each later wave instead forecasts remaining
+capture time from target loyalty: the latest battle report or target assessment, then landed hits
+minus regeneration as fallback. Already-landed hits are not reset to 100 loyalty.
+
 The capital opens by growing producers to 5, then toward 8; after producers 8 it raises the
 Great Hall toward 5 and continues production growth. Its military opening is fixed: Lumberyard
 14, Quarry 14, Mine 14 unlock Barracks 1; Wall 5 follows before any further military building;
@@ -23,7 +30,9 @@ and Barracks 5 are already part of the opening. The capital keeps at least 200 P
 after producer 20 its target is `max(200, 3 × strongest economic-city stationed Pikemen)`.
 Each economic city with Wall 10 targets `max(250, floor(capital home Pikemen / 3))` stationed
 Pikemen and requests a top-up only below 80% of that target. The capital fulfils requests only
-when its home reserve covers its own target plus the request.
+when at least 250 Pikemen will remain at home after sending that request. With active requests,
+the training target is `max(own target, 250) + sum(all active city requests)`; without requests,
+it remains the own target. A request for 250 therefore requires at least 500 before sending.
 
 Keep 20 Scouts at the capital per owned city, counting home and queued. Wall-10 economic cities
 request 20 stationed Scouts; the capital fulfils them from its home reserve. Stable 1 is only for
@@ -45,7 +54,7 @@ producer magically less productive. The total-production ledger remains gross.
 If sustainable funding is missing, the resource producers needed to restore it outrank routine
 Pikeman recruitment. Recruitment waits rather than spending down a stockpile on an unsustainable
 flow. Existing buildings and troops are preserved; this policy only changes new proposals.
-Capital producer upgrades retain the level-20 ceiling and round-end payback test.
+Capital producer upgrades use a level-25 ceiling and retain the round-end payback test.
 
 For sustainable defensive recruitment, the President also considers population runway before
 committing to another building. If that build followed by a Farm would leave too few slots for
@@ -94,12 +103,12 @@ Scores are deterministic integers:
 | Cellar | 80 **only** if protection per resource is below the largest 60-tick production amount (one minute); otherwise not-needed (25) |
 | First Barracks | 79 when unlocked and usable, below capacity/protection and ahead of discretionary Hall/production investment (ties prefer Barracks); no further military levels |
 | Military development | 88 for Wall 5, 90 for Hall 10, 76 for later military steps; 79 for Barracks 1/Hall prerequisites |
-| Capital Pikemen | 75 while below the home target plus active requests; 50 for a minute-long batch after producer 20 when the target is met |
-| Economic-city defender request | 80 when stationed Pikemen are below 80% of target; capital sends only with its own reserve plus the full request |
+| Capital Pikemen | 75 below `max(own target, 250) + sum(all active city requests)` when requests exist, otherwise the own target; 50 for a minute-long batch after producer 20 when the target is met |
+| Economic-city defender request | 80 when stationed Pikemen are below 80% of target; capital sends only with 250 retained plus the full request |
 | Raiders | 72 to train toward 150 owned, counting home + away + queued; attacks need at least 100 at home and take every home Raider |
 | Scouts | 60 to maintain 20 at the capital per city owned, counting home + queued; Stable 1 is only for Scouts |
 | Walls | Capital 84 only when marginal Wall benefit beats one Pikeman; never above 10. Economic-city Wall 10 is 75 after producers reach 10 |
-| Resource producer | Below level 5: 85 minus production rank (83–85), ahead of Cellar/Hall/starter military but below necessary capacity. From level 5: 60/50/40 by coverage; 80–82 for a Pikeman-resource shortage. Capital ceiling 20; economic cities 10 before Wall 10 and 25 after |
+| Resource producer | Below level 5: 85 minus production rank (83–85), ahead of Cellar/Hall/starter military but below necessary capacity. From level 5: 60/50/40 by coverage; 80–82 for a Pikeman-resource shortage. Capital ceiling 25; economic cities 10 before Wall 10 and 25 after |
 
 90–100 = capacity, 70–89 = opening production/protection/construction speed/military spending, 40–69 = production. Lower scores are
 informational and never executed. Not-needed proposals remain visible at the bottom. Ties use
@@ -370,8 +379,9 @@ bot. The map's manual commands and the game's public scouting/battle reports rem
 The capital's defense is Pikemen only. Before all three capital producers reach level 20, its home
 target is 200; after that, the target is `max(200, 3 × strongest economic-city stationed Pikemen)`.
 Each Wall-10 economic city targets `max(250, floor(capital home Pikemen / 3))` stationed Pikemen.
-It requests a top-up only below 80% of target, and the capital sends only when home Pikemen cover
-its own target plus the request. Economic cities never train troops.
+It requests a top-up only below 80% of target. With active requests, the capital trains toward
+`max(own target, 250) + sum(all active city requests)`; without requests, it keeps the own target.
+Sending requires 250 retained plus the individual request. Economic cities never train troops.
 
 Pikeman budget uses one Pikeman's live costs, training time and population. It preserves 20% of
 gross production for construction and the `max(50, 20% of capacity)` free-population buffer.
@@ -380,7 +390,9 @@ run before a long build when future Pikeman batches would not fit above that buf
 trains Raiders toward 150 owned (home, away and queued); conquest needs at least 100 at home. Scouts are
 maintained at 20 per owned city at the capital and supported at 20 per economic city on request.
 
-The capital producer ceiling is level 20. Economic-city producers stop at level 10 until Wall 10,
+The capital producer ceiling is level 25; attack, defence targets and growth still transition at level 20.
+Hall projections and the conquest funding-upgrade fallback also allow capital producers through level 25.
+Economic-city producers stop at level 10 until Wall 10,
 then can grow to level 25. An economic city builds only Wall 10 as a military building. Capital
 Walls compare marginal defense against one Pikeman and stop at level 10. The executor journals and
 reconciles each action separately, including support and recall.
@@ -399,8 +411,9 @@ one queued build per village, normal training one batch per facility, and combat
 lane globally. This is concurrency of server work, not concurrent duplicate network writers.
 
 Training uses the existing per-facility queues and the President's single-action allocation.
-Pikemen are recruited toward the capital's defense target and Raider losses are retrained toward
-150 owned. Scouts are recruited at Stable 1 toward 20 at home per owned city. Each batch is
+Pikemen are recruited toward `max(own target, 250) + sum(all active city requests)` when requests
+exist, otherwise the own target; Raider losses are retrained toward 150 owned.
+Scouts are recruited at Stable 1 toward 20 at home per owned city. Each batch is
 bounded by live training options, the one-minute duration, queue limits, affordability, the
 population buffer and the round-end use window. The garrison remains Pikemen-only; Raiders are
 the attack force and Scout training stays at Stable 1. The executor journals each action

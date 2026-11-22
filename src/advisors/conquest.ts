@@ -26,7 +26,7 @@ export interface ConquestPlan {
 export interface ConquestContext {
  plan: ConquestPlan;
  map?: MapResponse;
- assessment?: {tick: number; raiders: number; battle: SimulateBattleResponse};
+ assessment?: {tick: number; raiders: number; battle: SimulateBattleResponse; targetId?: string; targetLoyalty?: number};
 }
 const resources = ['timber','stone','iron'] as const;
 const producerResources = {lumberyard:'timber',quarry:'stone',mine:'iron'} as const;
@@ -39,13 +39,29 @@ export function conquestTravel(context: AdvisorContext, c: ConquestContext): num
  return v&&t?Math.max(1,Math.ceil(Math.hypot(t.x-v.x,t.y-v.y)*speed)):null;
 }
 /** Exact loyalty boundaries, allowing council spacing, and six bounded hits at most. */
-export function conquestCaptureTick(context: AdvisorContext,c: ConquestContext,start=context.state.world.tick,travel=conquestTravel(context,c)): number | null {
+export function conquestCaptureTick(context: AdvisorContext,c: ConquestContext,start=context.state.world.tick,travel=conquestTravel(context,c),loyalty=100): number | null {
  if(travel===null)return null;
  const combat=context.rules.rules.COMBAT as {envoyLoyaltyHit:number;loyaltyRegenTicks:number};
  const interval=Math.max(travel*2,context.state.world.actIntervalTicks??0);
  const arrivals=Array.from({length:6},(_,i)=>Math.ceil(start)+travel+i*interval);
- const hit=conquestLoyalty(arrivals,combat.envoyLoyaltyHit,combat.loyaltyRegenTicks).findIndex(n=>n<=0);
+ const hit=conquestLoyalty(arrivals,combat.envoyLoyaltyHit,combat.loyaltyRegenTicks,100,loyalty,context.state.world.tick).findIndex(n=>n<=0);
  return hit<0?null:arrivals[hit];
+}
+
+export function conquestTargetLoyalty(context: AdvisorContext,c: ConquestContext): number {
+ const now=context.state.world.tick,combat=context.rules.rules.COMBAT as {envoyLoyaltyHit:number;loyaltyRegenTicks:number};
+ const report=c.plan.lastBattle;
+ let tick=c.plan.startedTick,loyalty=100;
+ const flying=context.state.commands.outgoing.filter(command=>command.from.id===c.plan.villageId&&command.to.id===c.plan.targetId&&command.kind==='attack'&&!command.returning&&command.arrivalTick>now).length;
+ loyalty-=Math.max(0,c.plan.waves-flying)*combat.envoyLoyaltyHit;
+ if(report&&report.defender.id===c.plan.targetId&&report.attacker.id===c.plan.villageId&&report.loyalty&&report.tick<=now){
+  tick=report.tick;loyalty=report.loyalty.after;
+ }
+ const assessed=c.assessment?.targetLoyalty??c.assessment?.battle.loyalty?.before;
+ if(c.assessment?.targetId===c.plan.targetId&&assessed!==undefined&&c.assessment&&c.assessment.tick>=tick&&c.assessment.tick<=now){
+  tick=c.assessment.tick;loyalty=assessed;
+ }
+ return Math.max(0,Math.min(100,loyalty+Math.floor(now/combat.loyaltyRegenTicks)-Math.floor(tick/combat.loyaltyRegenTicks)));
 }
 
 /** Add bounded conquest work without excluding normal proposals. */
@@ -125,7 +141,7 @@ export function applyConquest(context: AdvisorContext,proposals: Proposal[],c?: 
  if(construction?.blockers.length===1&&construction.blockers[0]==='INSUFFICIENT_RESOURCES'){
   let best:{p:Proposal;ticks:number}|undefined;
   for(const [building,resource] of [['lumberyard','timber'],['quarry','stone'],['mine','iron']] as const){
-   const o=v.options.build.find(o=>o.building===building);if(!o?.ok||o.level>20||free<o.pop+buffer)continue;
+   const o=v.options.build.find(o=>o.building===building);if(!o?.ok||o.level>25||free<o.pop+buffer)continue;
    const income=(rules.tables.production as {perTickMilli:number}[])[o.level]?.perTickMilli;if(!income)continue;
    const f=fundingUpgrade({stockMilli:v.resourcesMilli,incomeMilli:v.productionPerTickMilli,bill:construction.requirements,upgradeCost:o.cost,ticks:o.ticks,resource,newIncomeMilli:income});
    const p=build(building);if(f.improves&&p?.status==='ready'&&(!best||f.upgradeTicks<best.ticks))best={p,ticks:f.upgradeTicks};
@@ -142,7 +158,7 @@ export function applyConquest(context: AdvisorContext,proposals: Proposal[],c?: 
    !state.commands.outgoing.some(cmd=>cmd.from.id===v.id)&&c.map?.tick===state.world.tick&&
    c.map.villages.find(t=>t.id===plan.targetId)?.ownerId===null&&c.assessment?.tick===state.world.tick&&
    c.assessment.raiders===raiders&&c.assessment.battle.winner==='attacker'&&(c.assessment.battle.attackerSurvivors.envoy??0)>=1){
-  const capture=conquestCaptureTick(context,c),b=blockers();
+  const capture=conquestCaptureTick(context,c,state.world.tick,conquestTravel(context,c),conquestTargetLoyalty(context,c)),b=blockers();
   if(plan.waves>=6||capture===null||capture+60>state.world.endsAtTick)b.push('ROUND_END_TOO_SOON');
   if((v.units.home.pikeman??0)<150)b.push('HOME_DEFENCE_CHANGED');
   retained.push({id:`${state.world.epoch}:${v.id}:conquest:send:${plan.waves}`,task:sequence>=2?'expansion.dispatch':proposalTask('conquest',{type:'send'},plan.waves+1),advisor:'conquest',villageId:v.id,villageName:v.name,

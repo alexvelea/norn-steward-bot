@@ -29,7 +29,7 @@ import { logisticsAdvisor } from "../advisors/logistics.js";
 import { militaryAdvisor } from "../advisors/military.js";
 import { expansionReadiness } from "../advisors/sustained-defense.js";
 import { prioritizeFarmRunway } from "../advisors/farm-runway.js";
-import {applyConquest, conquestScope, conquestTravel, recurringConquestFits, type ConquestContext} from "../advisors/conquest.js";
+import {applyConquest, conquestScope, conquestTravel, conquestTargetLoyalty, recurringConquestFits, type ConquestContext} from "../advisors/conquest.js";
 import { BARRACKS_CAP, militaryUnlocked, RAIDER_SEND_MIN } from "../advisors/defense-budget.js";
 import {safeEnvoyAttack} from "../review/conquest-plan.js";
 import type { AdvisorContext, Proposal } from "../advisors/types.js";
@@ -527,9 +527,10 @@ export class Controller {
     // Only a journal-linked own victory may reset militia. Otherwise use the maximum.
     const baseDefense=hamlet.hamletBaseDefense+(last?.outcome==='won'?
       Math.min(hamlet.hamletMilitiaCap,Math.ceil(hamlet.hamletMilitiaPerTick*(state.world.tick+travel-last.tick))):hamlet.hamletMilitiaCap);
+    const targetLoyalty=conquestTargetLoyalty(context,this.conquest);
     const battle=await this.request<SimulateBattleResponse>(this.settings,this.path('/simulate/battle'),{
       attacker:{raider:v.units.home.raider,envoy:1},defender:{},wall:hamlet.hamletLevels.wall[1],loyalty:100,baseDefense});
-    this.conquest.assessment={tick:state.world.tick,raiders:v.units.home.raider!,battle};
+    this.conquest.assessment={tick:state.world.tick,raiders:v.units.home.raider!,battle,targetId:plan.targetId,targetLoyalty};
     savePlan();
   }
   private saveConquestPlan(plan: ConquestContext["plan"]): MissionInstance {

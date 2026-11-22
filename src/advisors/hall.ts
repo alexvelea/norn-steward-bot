@@ -36,6 +36,7 @@ export interface HallPolicy {
   minimumSaving: number;
   margin: number;
   producerPayback?: boolean;
+  producerCeiling?: number;
 }
 export interface HallEstimate {
   needed: boolean;
@@ -228,7 +229,7 @@ export function estimateHall(
       return "farm";
     if (storageScore && available("storehouse")) return "storehouse";
     const candidates = producerIds.filter((id) => {
-      if (p.levels[id] >= PRODUCER_CEILING || !available(id)) return false;
+      if (p.levels[id] >= (policy.producerCeiling ?? PRODUCER_CEILING) || !available(id)) return false;
       if (!policy.producerPayback) return true;
       const row = rowFor(p, id)!;
       const live =

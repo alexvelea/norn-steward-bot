@@ -34,10 +34,10 @@ flowchart TD
   n10["Producers at level 12<br/><small>economy.producers.12 · milestone</small>"]
   n11["Producers at level 15<br/><small>economy.producers.15 · milestone</small>"]
   n12["Producers at level 20<br/><small>economy.producers.20 · milestone</small>"]
-  n13["Producers capped at 20<br/><small>economy.producer-cap · policy</small>"]
+  n13["Producers capped at 25<br/><small>economy.producer-cap · policy</small>"]
   n14["Capacity and protection<br/><small>economy.capacity · group</small>"]
   n15["Farm capacity<br/><small>economy.farm · task</small>"]
-  n16["Storehouse overflow<br/><small>economy.storehouse · task</small>"]
+  n16["Storehouse capacity<br/><small>economy.storehouse · task</small>"]
   n17["Great Hall<br/><small>economy.hall · task</small>"]
   n18["Early-build successor window<br/><small>economy.successor-window · policy</small>"]
   n19["Production payback<br/><small>economy.payback · policy</small>"]
@@ -501,13 +501,13 @@ Contains edges are solid blue, requires edges are dashed red, and contributesTo 
 | economy.producers.12 | milestone | Producers at level 12 | All three resource producers reach level 12; the early capital gate is Lumberyard 14, Quarry 14, Mine 14. | minimum=12 | — | — |
 | economy.producers.15 | milestone | Producers at level 15 | All three resource producers reach level 15 after Barracks 5. | minimum=15 | early.barracks5 | — |
 | economy.producers.20 | milestone | Producers at level 20 | All three resource producers reach level 20. | minimum=20 | — | — |
-| economy.producer-cap | policy | Producers capped at 20 | Capital producers stop at level 20. | — | — | — |
+| economy.producer-cap | policy | Producers capped at 25 | Capital producers stop at level 25; attack and defence transitions remain at level 20. | — | — | — |
 | economy.capacity | group | Capacity and protection | Protect resources and maintain population and storage capacity. | — | — | — |
 | economy.farm | task | Farm capacity | Keep free population for queued work and Pikeman training; before a long build, offer the Farm first if the batches trained meanwhile wouldn't fit. | — | — | — |
-| economy.storehouse | task | Storehouse overflow | Prevent projected stock from exceeding storage. | — | — | — |
+| economy.storehouse | task | Storehouse capacity | Prevent projected overflow; after a capture, proactively expand capital storage to fit the next Envoy before recurring admission, even without overflow. | — | — | — |
 | economy.hall | task | Great Hall | Use the existing bounded construction payback comparison. | — | economy.producers.8 | — |
 | economy.successor-window | policy | Early-build successor window | Allow only the existing strict construction-successor window. | remainingRealSecondsExclusive=10 | — | — |
-| economy.payback | policy | Production payback | Keep the existing round-end production return test and ceiling. | producerCeiling=20 | — | — |
+| economy.payback | policy | Production payback | Keep the existing round-end production return test and ceiling. | producerCeiling=25 | — | — |
 | economy.round-end | policy | Round-end completion | Keep current affordability, construction, and use deadlines. | — | — | — |
 | economy.hall-push | policy | Great Hall push | Once producers reach 20, force the Great Hall to 15, then keep it growing alongside military growth. | level=15 | economy.producers.20 | — |
 | early-game | group | Early game | Grow producers to 14/14/14, then build Barracks 1, Wall 5, Hall 10 and Barracks 5 before reaching producers 15. Train toward 200 home Pikemen alongside the build order and complete the infrastructure that enables conquest. | — | — | — |
@@ -519,8 +519,8 @@ Contains edges are solid blue, requires edges are dashed red, and contributesTo 
 | early.pikemen | task | 200 home Pikemen | Train Pikemen from Barracks 1 in parallel until 200 are home. | count=200 | early.barracks1 | military.pikemen-baseline |
 | defense | mission | Military | Build the Pikemen garrison, keep the Raider attack force trained, and station Scouts. | — | — | — |
 | military.garrison | group | Garrison | Organize the capital's garrison requirements and growth. | — | — | — |
-| military.pikemen-baseline | task | Train Pikemen | After the early goal is met, maintain 200 home Pikemen and add economic-city defender requests; recruitment starts at Barracks 1. | count=200 | — | — |
-| military.defence-scale | policy | Capital holds 3× any city | Once the capital's producers reach 20, the capital's home Pikemen grow to 3× the strongest other city's; economic cities follow via their ÷3 defender target. | multiplier=3 | economy.producers.20 | — |
+| military.pikemen-baseline | task | Train Pikemen | Recruit from Barracks 1 toward the own target: 200 before producer 20, then max(200, 3 × strongest economic-city stationed Pikemen). With active requests, train toward max(own target, 250) + all active city requests, ensuring 250 retained after support. Without requests, keep the own target. | count=200 | — | — |
+| military.defence-scale | policy | Capital holds 3× any city | At producer 20, the own target is max(200, 3 × strongest economic-city stationed Pikemen). With active requests, train toward max(own target, 250) + all active city requests; otherwise keep the own target. Economic cities follow via their ÷3 defender target. | multiplier=3 | economy.producers.20 | — |
 | military.barracks-growth | task | Barracks grows when troops lag | Raise Barracks when it cannot train enough Pikemen or conquest Raiders in time; Barracks is capped at level 5. | — | — | — |
 | military.scouting | group | Scouting | Build Stable 1 and keep the capital's Scouts trained. | — | — | — |
 | military.stable1 | task | Stable 1 | After producers 15 and 200 home Pikemen, build Stable 1 for Scouts, including its Smithy 5 prerequisite. | level=1 | economy.producers.15, early.pikemen | — |
@@ -586,7 +586,7 @@ Contains edges are solid blue, requires edges are dashed red, and contributesTo 
 | logistics.market-growth | task | Market grows when needed | Raise the capital's Market when open requests need more merchants than it has. | — | — | — |
 | econ.requests | group | Requests to the capital | What this city asks the capital for; the capital decides whether it can afford it. | — | — | — |
 | econ.request-resources | task | Request resources | Per resource, by stage: setup below 1,000 tops up to 2,000 (95); growth below 2,000 tops up to 4,000 (85); developed the same buffer at 40. | setupBelow=1000, setupTopUp=2000, setupScore=95, growthBelow=2000, growthTopUp=4000, growthScore=85, developedScore=40 | — | — |
-| econ.request-defenders | task | Request defenders | Unlocked by Wall 10. Target Pikemen stationed = max(250, capital home Pikemen ÷ 3). Request a top-up to the target only when stationed Pikemen fall below 80% of it (for example, capital 600 → target 200, top-up when ≤160 (below 200×0.8)). Fulfilled by the capital. | baseline=250, capitalShare=3, triggerShare=0.8 | econ.wall10 | — |
+| econ.request-defenders | task | Request defenders | Unlocked by Wall 10. Target stationed Pikemen = max(250, floor(capital home Pikemen ÷ 3)); request a top-up only below 80% (capital 600 → target 250, top-up below 200). The capital trains for 250 retained + all active city requests, or its higher own target plus requests, and sends only when 250 remain at home. | baseline=250, capitalShare=3, triggerShare=0.8 | econ.wall10 | — |
 | econ.request-scouts | task | Request scouts | Keep 20 Scouts stationed; support Scouts defend against enemy scouting. | — | — | — |
 | econ.producers.15 | milestone | Producers at level 15 | All three producers reach level 15. | minimum=15 | — | — |
 | econ.surplus | task | Send surplus to the capital | Once all producers are 15+, ship stock above the next build's cost (at least 4,000 of each kept) to the capital, bounded by merchants and the capital's free storage. | producers=15, reserve=4000, minimumMerchants=5 | econ.market, econ.producers.15 | — |
@@ -596,7 +596,7 @@ Contains edges are solid blue, requires edges are dashed red, and contributesTo 
 | expansion.cities-defended | milestone | Every city defended | Every economic city has Wall 10 and at least 80% of its Pikemen target stationed. | economicWall=10, defenderShare=0.8 | — | — |
 | expansion.envoy | task | Train next Envoy | Train one Envoy for the next target once the next conquest has started. | — | expansion.cities-defended | — |
 | expansion.escort | task | Escort army at home | Before every wave, train up to max(150, simulated escort) Raiders; earlier survivors count. | — | — | — |
-| expansion.dispatch | task | Dispatch waves | Same rules as the first conquest: nearest unowned target, at least 100 Raiders at home, and recheck before each of at most six waves. | maximumWaves=6 | expansion.envoy, expansion.escort | — |
+| expansion.dispatch | task | Dispatch waves | Recheck each of at most six waves with at least 100 home Raiders. Capture deadlines use current target loyalty from battle reports or target assessments, otherwise landed hits and regeneration; fresh admission assumes 100. | maximumWaves=6 | expansion.envoy, expansion.escort | — |
 | expansion.captured | milestone | Target captured | The captured city is tagged economic and starts the economic-city flow. | — | — | — |
 | expansion.cities4 | milestone | 4 cities owned | Own four cities before opening the enemy-conquest plan. | minimum=4 | — | — |
 | expansion.enemy | group | Enemy conquest | Scout and simulate attacks on enemy player villages before dispatching conquest. | — | expansion.cities4 | — |
